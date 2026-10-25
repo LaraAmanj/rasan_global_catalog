@@ -1,0 +1,6 @@
+# Only product photos (.jpg) can be opened from this folder; nothing here can run as code.
+Options -Indexes
+Require all denied
+<FilesMatch "\.jpg$">
+  Require all granted
+</FilesMatch>

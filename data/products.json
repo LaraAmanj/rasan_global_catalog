@@ -1,0 +1,134 @@
+[
+    {
+        "id": "ab793cb8deda",
+        "name": "Mango Juice 1L",
+        "category": "general_foods",
+        "sku": "DRK-001GHFHJ",
+        "price": 99,
+        "note": "12 bottles per carton",
+        "image": "uploads/mango-juice-1l-2.jpg",
+        "in_stock": true,
+        "updated_at": "2026-10-23T16:58:33+00:00"
+    },
+    {
+        "id": "297ddfddb182",
+        "name": "Sparkling Water 500ml",
+        "category": "drink",
+        "sku": "DRK-002",
+        "price": 0.45,
+        "note": "",
+        "image": "uploads/sparkling-water-500ml.jpg",
+        "in_stock": true,
+        "updated_at": "2026-10-23T14:29:48+00:00"
+    },
+    {
+        "id": "a854ee778b66",
+        "name": "Building Blocks Set",
+        "category": "toys",
+        "sku": "TOY-001",
+        "price": 9.9,
+        "note": "Age 3+",
+        "image": "uploads/building-blocks-set.jpg",
+        "in_stock": true,
+        "updated_at": "2026-10-23T14:29:48+00:00"
+    },
+    {
+        "id": "a9db36c12146",
+        "name": "Remote Control Car",
+        "category": "toys",
+        "sku": "TOY-002",
+        "price": 18.5,
+        "note": "Batteries not included",
+        "image": "uploads/remote-control-car.jpg",
+        "in_stock": false,
+        "updated_at": "2026-10-23T14:29:48+00:00"
+    },
+    {
+        "id": "59c7b5bacccf",
+        "name": "Dish Soap Lemon 750ml",
+        "category": "household",
+        "sku": "HH-001",
+        "price": 1.8,
+        "note": "",
+        "image": "uploads/dish-soap-lemon-750ml.jpg",
+        "in_stock": true,
+        "updated_at": "2026-10-23T14:29:48+00:00"
+    },
+    {
+        "id": "ed8ae04ab62c",
+        "name": "Kitchen Towels 4 Rolls",
+        "category": "household",
+        "sku": "HH-002",
+        "price": 3.2,
+        "note": "Offer: buy 10 get 1",
+        "image": "uploads/kitchen-towels-4-rolls.jpg",
+        "in_stock": true,
+        "updated_at": "2026-10-23T14:29:48+00:00"
+    },
+    {
+        "id": "5cb9a69ece45",
+        "name": "Basmati Rice 5kg",
+        "category": "general_foods",
+        "sku": "GF-001",
+        "price": 7.75,
+        "note": "",
+        "image": "uploads/basmati-rice-5kg.jpg",
+        "in_stock": true,
+        "updated_at": "2026-10-23T14:29:48+00:00"
+    },
+    {
+        "id": "67471535a2f3",
+        "name": "Tomato Paste 400g",
+        "category": "general_foods",
+        "sku": "GF-002",
+        "price": 0.95,
+        "note": "24 tins per box",
+        "image": "uploads/tomato-paste-400g.jpg",
+        "in_stock": false,
+        "updated_at": "2026-10-23T14:29:48+00:00"
+    },
+    {
+        "id": "0ab3dbac1183",
+        "name": "Chocolate Bar 45g",
+        "category": "sweets",
+        "sku": "SW-001",
+        "price": 0.6,
+        "note": "",
+        "image": "uploads/chocolate-bar-45g.jpg",
+        "in_stock": true,
+        "updated_at": "2026-10-23T14:29:48+00:00"
+    },
+    {
+        "id": "df6418eefb65",
+        "name": "Salted Potato Chips 150g",
+        "category": "snacks",
+        "sku": "CH-001",
+        "price": 1.1,
+        "note": "New flavour coming",
+        "image": "uploads/salted-potato-chips-150g.jpg",
+        "in_stock": true,
+        "updated_at": "2026-10-23T14:29:48+00:00"
+    },
+    {
+        "id": "4d7bd7e73417",
+        "name": "Butter Cookies Tin 400g",
+        "category": "snacks",
+        "sku": "BS-001",
+        "price": 4.5,
+        "note": "",
+        "image": "uploads/butter-cookies-tin-400g.jpg",
+        "in_stock": true,
+        "updated_at": "2026-10-23T14:29:48+00:00"
+    },
+    {
+        "id": "71fc86b1a5f8",
+        "name": "Fruit Gummy Bears 100g",
+        "category": "snacks",
+        "sku": "GB-001",
+        "price": 0.85,
+        "note": "",
+        "image": "uploads/fruit-gummy-bears-100g.jpg",
+        "in_stock": true,
+        "updated_at": "2026-10-23T14:29:48+00:00"
+    }
+]
