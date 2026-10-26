@@ -15,6 +15,11 @@ return [
 
     'currency' => '£',
 
+    // VAT added on the PDF invoice (percent). The salesman can change it per order.
+    'vat_rate'   => 20,
+    // Your VAT registration number, printed on the invoice (leave '' to hide)
+    'vat_number' => '',
+
     // ── Hidden price system ──────────────────────────────────
     // Customers never see the real price. Each product shows a
     // secret letter code instead, built from this 10-letter key:

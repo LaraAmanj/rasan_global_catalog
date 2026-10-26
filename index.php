@@ -5,6 +5,10 @@ $company = cfg('company');
 $appData = [
     'company'    => $company,
     'currency'   => cfg('currency'),
+    'vatRate'    => (float) (cfg('vat_rate') ?? 0),
+    'vatNumber'  => (string) (cfg('vat_number') ?? ''),
+    // Shown instead of the product photo when a product is out of stock
+    'outOfStockImage' => image_url('uploads/out_of_stock.jpg'),
     'categories' => cfg('categories'),
 ];
 ?>
@@ -49,6 +53,7 @@ $appData = [
   <section id="viewCategories">
     <div class="hero">
       <div class="hero-text">
+        <span class="hero-eyebrow"><i></i>Wholesale catalog</span>
         <h1>Choose a <span>category</span></h1>
         <p>Pick a section to start browsing products</p>
       </div>
@@ -131,6 +136,7 @@ $appData = [
       <label class="field"><span>Salesman</span><input name="salesman" maxlength="60"></label>
       <label class="field"><span>Order note</span><input name="note" maxlength="200"></label>
     </div>
+    <label class="field"><span>VAT %</span><input name="vat" type="number" min="0" max="100" step="0.01" inputmode="decimal" required></label>
     <div class="modal-actions">
       <button type="button" class="btn ghost" data-close>Cancel</button>
       <button type="submit" class="btn primary" id="makePdf">Create PDF</button>

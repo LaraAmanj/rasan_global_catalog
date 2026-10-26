@@ -2,3 +2,10 @@ Options -Indexes
 <FilesMatch "^(config|lib)\.php$">
   Require all denied
 </FilesMatch>
+
+# Cache category photos, CSS and JS for a week
+<IfModule mod_headers.c>
+  <FilesMatch "\.(jpe?g|png|webp|css|js)$">
+    Header set Cache-Control "public, max-age=604800"
+  </FilesMatch>
+</IfModule>

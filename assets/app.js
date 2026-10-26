@@ -9,6 +9,7 @@
   const LOCK_ICON = '<svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>';
   const OPEN_ICON = '<svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 7.5-2"/></svg>';
   const SALESMAN_KEY = 'rg_salesman';
+  const VAT_KEY = 'rg_vat';
 
   const state = {
     products: [],
@@ -58,6 +59,9 @@
   const byId = (id) => state.products.find((p) => p.id === id);
   const isShown = (p) => state.unlocked && p.price !== undefined && (state.showAll || state.revealed.has(p.id));
   const catOf = (key) => APP.categories[key] || { label: key, icon: '📦' };
+  // Salesman can give a discount by changing the unit price of a line
+  const unitPrice = (l) => (l.price ?? l.product.price) || 0;
+  const round2 = (n) => Math.round(n * 100) / 100;
 
   // ── rendering ─────────────────────────────────────────────
   function render() {
@@ -65,6 +69,7 @@
     $('#viewCategories').hidden = !onCategories;
     $('#viewProducts').hidden = onCategories;
     $('#backBtn').hidden = onCategories;
+    document.body.classList.toggle('on-cats', onCategories);
     document.body.classList.toggle('unlocked', state.unlocked);
     document.body.classList.toggle('show-all', state.unlocked && state.showAll);
     $('#lockBtn').title = state.showAll ? 'All prices visible – tap to lock' : 'Show all real prices (salesman)';
@@ -83,8 +88,7 @@
       <button class="cat-card ${c.image ? 'has-photo' : ''}" data-cat="${key}" style="--d:${i * 50}ms">
         ${c.image ? `<img class="cat-photo" src="${esc(c.image)}" alt="" loading="lazy" onerror="this.parentNode.classList.remove('has-photo');this.remove()">` : ''}
         <span class="cat-top">
-          <span class="cat-icon">${c.icon}</span>
-          <span class="cat-badge">${items.length}</span>
+         <div></div>
         </span>
         <span class="cat-body">
           <span class="cat-name">${esc(c.label)}</span>
@@ -123,6 +127,9 @@
 
   function imageHtml(p, cls = '') {
     const icon = catOf(p.category).icon;
+    if (!p.in_stock && APP.outOfStockImage) {
+      return `<img class="${cls}" src="${esc(APP.outOfStockImage)}" alt="Out of stock" loading="lazy" data-fallback="${icon}">`;
+    }
     return p.image
       ? `<img class="${cls}" src="${esc(p.image)}" alt="${esc(p.name)}" loading="lazy" data-fallback="${icon}">`
       : `<span class="ph ${cls}">${icon}</span>`;
@@ -144,17 +151,17 @@
 
   function cardHtml(p) {
     const line = state.cart[p.id];
+    const zoomable = p.image && p.in_stock; // out of stock shows the "Out of stock" sign instead
     let action;
-    if (!p.in_stock) action = '<button class="btn add" disabled>Unavailable</button>';
-    else if (line) action = stepperHtml(p.id, line.qty);
+    if (line) action = stepperHtml(p.id, line.qty);
     else action = '<button class="btn add" data-add>+ Add</button>';
 
     return `
       <article class="card ${p.in_stock ? '' : 'is-out'} ${line ? 'in-cart' : ''}" data-id="${p.id}">
-        <div class="card-img" ${p.image ? 'data-zoom title="Tap to see full image"' : ''}>
+        <div class="card-img" ${zoomable ? 'data-zoom title="Tap to see full image"' : ''}>
           ${imageHtml(p)}
           <span class="badge ${p.in_stock ? 'in' : 'out'}">${p.in_stock ? 'Stock In' : 'Stock Out'}</span>
-          ${p.image ? '<span class="zoom-hint"><svg viewBox="0 0 24 24"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg></span>' : ''}
+          ${zoomable ? '<span class="zoom-hint"><svg viewBox="0 0 24 24"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg></span>' : ''}
         </div>
         <div class="card-body">
           <h3>${esc(p.name)}</h3>
@@ -186,15 +193,18 @@
 
     $('#cartList').innerHTML = lines.length ? lines.map((l) => {
       const p = l.product;
+      const u = unitPrice(l);
       const price = isShown(p)
-        ? `<strong>${money(p.price * l.qty)}</strong><small>${money(p.price)} each</small>`
+        ? `<strong>${money(u * l.qty)}</strong>
+           <label class="line-uprice">${esc(APP.currency)}<input type="number" min="0" step="0.01" inputmode="decimal" value="${u.toFixed(2)}" data-uprice aria-label="Unit price"> each</label>
+           ${u < p.price ? `<small class="was">was ${money(p.price)} · −${Math.round((1 - u / p.price) * 100)}%</small>` : ''}`
         : `<span class="price code small">${esc(p.price_code)}</span>`;
       return `
         <div class="line" data-id="${p.id}">
           <div class="line-img">${imageHtml(p)}</div>
           <div class="line-main">
             <div class="line-top">
-              <div><h4>${esc(p.name)}</h4><span class="sku">${esc(p.sku)}</span></div>
+              <div><h4>${esc(p.name)}</h4><span class="sku">${esc(p.sku)}</span>${p.in_stock ? '' : ' <span class="line-out">Stock Out</span>'}</div>
               <button class="icon-btn sm" data-remove aria-label="Remove"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
             </div>
             <div class="line-mid">${stepperHtml(p.id, l.qty)}<div class="line-price">${price}</div></div>
@@ -204,7 +214,7 @@
     }).join('') : `<div class="empty small"><span>🛒</span><p>Tap “+ Add” on a product to start an order.</p></div>`;
 
     $('#totalRow').innerHTML = !lines.length ? '' : lines.every((l) => isShown(l.product))
-      ? `<span>Total</span><strong>${money(lines.reduce((s, l) => s + (l.product.price || 0) * l.qty, 0))}</strong>`
+      ? `<span>Total <small>(ex VAT)</small></span><strong>${money(lines.reduce((s, l) => s + unitPrice(l) * l.qty, 0))}</strong>`
       : `<span>Total</span><button class="link" data-reveal>🔒 Show prices to see total</button>`;
   }
 
@@ -218,10 +228,16 @@
     renderCart();
   }
 
+  // Only swap the price/button area, so the photo stays loaded (no flicker or re-download)
   function refreshCard(id) {
     const el = document.querySelector(`.card[data-id="${id}"]`);
     const p = byId(id);
-    if (el && p) el.outerHTML = cardHtml(p);
+    if (!el || !p) return;
+    const fresh = document.createElement('div');
+    fresh.innerHTML = cardHtml(p);
+    const card = fresh.firstElementChild;
+    el.className = card.className;
+    el.querySelector('.card-foot').replaceWith(card.querySelector('.card-foot'));
   }
 
   function handleStepper(e) {
@@ -372,7 +388,20 @@
 
   document.addEventListener('change', (e) => {
     if (e.target.matches('[data-qty]')) setQty(e.target.closest('.stepper').dataset.id, e.target.value);
+    if (e.target.matches('[data-uprice]')) setPrice(e.target.closest('.line').dataset.id, e.target.value);
   });
+
+  /** Custom unit price for one line (discount). Empty or invalid → back to the normal price. */
+  function setPrice(id, value) {
+    const line = state.cart[id];
+    const p = byId(id);
+    if (!line || !p) return;
+    const v = round2(Number(value));
+    if (value === '' || !Number.isFinite(v) || v < 0 || v === p.price) delete line.price;
+    else line.price = v;
+    saveCart();
+    renderCart();
+  }
 
   $('#drawer').addEventListener('click', (e) => {
     if (e.target.closest('[data-reveal]')) return showAllPrices();
@@ -422,6 +451,9 @@
   function openExport() {
     const form = $('#exportForm');
     try { form.salesman.value = localStorage.getItem(SALESMAN_KEY) || ''; } catch {}
+    let vat = null;
+    try { vat = localStorage.getItem(VAT_KEY); } catch {}
+    form.vat.value = vat ?? APP.vatRate ?? 0;
     $('#exportDialog').showModal();
   }
 
@@ -435,7 +467,8 @@
     e.preventDefault();
     const f = e.target;
     const info = Object.fromEntries(['company', 'address', 'phone', 'salesman', 'note'].map((k) => [k, f[k].value.trim()]));
-    try { localStorage.setItem(SALESMAN_KEY, info.salesman); } catch {}
+    info.vat = Math.max(0, Number(f.vat.value) || 0);
+    try { localStorage.setItem(SALESMAN_KEY, info.salesman); localStorage.setItem(VAT_KEY, info.vat); } catch {}
 
     // Make sure the session is still unlocked (prices come from the server)
     applyCatalog(await api('products'));
@@ -455,6 +488,7 @@
       state.cart = {};
       saveCart();
       f.reset();
+      f.vat.value = info.vat;
       closeCart();
       toast('PDF saved · order cleared');
     } catch (err) {
@@ -467,33 +501,6 @@
     }
   });
 
-  /** Loads an image as a small JPEG data URL for the PDF. Returns null if it can't (e.g. CORS). */
-  function imageToDataUrl(url) {
-    if (!url) return Promise.resolve(null);
-    return new Promise((resolve) => {
-      const img = new Image();
-      img.crossOrigin = 'anonymous';
-      const timer = setTimeout(() => resolve(null), 8000);
-      img.onload = () => {
-        clearTimeout(timer);
-        try {
-          const size = 160;
-          const canvas = document.createElement('canvas');
-          canvas.width = canvas.height = size;
-          const ctx = canvas.getContext('2d');
-          ctx.fillStyle = '#fff';
-          ctx.fillRect(0, 0, size, size);
-          const scale = Math.min(size / img.width, size / img.height);
-          const w = img.width * scale, h = img.height * scale;
-          ctx.drawImage(img, (size - w) / 2, (size - h) / 2, w, h);
-          resolve(canvas.toDataURL('image/jpeg', 0.85));
-        } catch { resolve(null); }
-      };
-      img.onerror = () => { clearTimeout(timer); resolve(null); };
-      img.src = url;
-    });
-  }
-
   async function buildPdf(info, lines) {
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF({ unit: 'mm', format: 'a4' });
@@ -505,8 +512,6 @@
     const now = new Date();
     const orderNo = 'RG-' + now.toISOString().slice(2, 10).replace(/-/g, '') + '-' + String(now.getHours()).padStart(2, '0') + String(now.getMinutes()).padStart(2, '0');
     const dateStr = now.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
-
-    const images = await Promise.all(lines.map((l) => imageToDataUrl(l.product.image)));
 
     // Header band
     doc.setFillColor(...brand);
@@ -527,7 +532,7 @@
     doc.text('SALES ORDER', W - 14, 15, { align: 'right' });
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(9);
-    doc.text([`Order no: ${orderNo}`, `Date: ${dateStr}`], W - 14, 22, { align: 'right' });
+    doc.text([`Order no: ${orderNo}`, `Date: ${dateStr}`, APP.vatNumber && `VAT no: ${APP.vatNumber}`].filter(Boolean), W - 14, 22, { align: 'right' });
 
     // Customer box
     let y = 46;
@@ -559,49 +564,62 @@
     }
 
     // Items table
-    let total = 0;
-    const body = lines.map((l, i) => {
+    let subtotal = 0, discount = 0, vat = 0;
+    const body = lines.map((l) => {
       const p = l.product;
-      const lineTotal = p.price * l.qty;
-      total += lineTotal;
-      const name = l.note ? `${p.name}\nNote: ${l.note}` : p.name;
-      return [i + 1, '', p.sku, name, l.qty, money(p.price), money(lineTotal)];
+      const u = unitPrice(l);
+      const lineNet = round2(u * l.qty);
+      const lineVat = round2(lineNet * info.vat / 100);
+      subtotal += lineNet;
+      vat += lineVat;
+      if (u < p.price) discount += round2((p.price - u) * l.qty);
+      return [l.qty, p.sku, p.name, l.note || '', money(p.price), money(u), money(lineVat), `${info.vat}%`, money(lineNet + lineVat)];
     });
+    subtotal = round2(subtotal);
+    vat = round2(vat);
+    const total = round2(subtotal + vat);
 
     doc.autoTable({
       startY: y - 6 + boxH + 6,
-      head: [['#', 'Image', 'SKU', 'Product', 'Qty', 'Unit price', 'Total']],
+      head: [['Qty', 'Code', 'Item', 'Description', 'Old Price', 'Unit Price', 'VAT', 'TAX %', 'Total']],
       body,
       theme: 'grid',
-      styles: { font: 'helvetica', fontSize: 9, cellPadding: 2.2, valign: 'middle', lineColor: [226, 232, 240], textColor: [15, 23, 42] },
+      styles: { font: 'helvetica', fontSize: 8.5, cellPadding: 2, valign: 'middle', lineColor: [226, 232, 240], textColor: [15, 23, 42] },
       headStyles: { fillColor: brand, textColor: 255, fontStyle: 'bold', halign: 'center' },
       alternateRowStyles: { fillColor: [248, 250, 252] },
       columnStyles: {
-        0: { cellWidth: 8, halign: 'center' },
-        1: { cellWidth: 18, minCellHeight: 18 },
-        2: { cellWidth: 26 },
-        4: { cellWidth: 14, halign: 'center' },
-        5: { cellWidth: 26, halign: 'right' },
-        6: { cellWidth: 28, halign: 'right', fontStyle: 'bold' },
+        0: { cellWidth: 10, halign: 'center' },
+        1: { cellWidth: 22 },
+        4: { cellWidth: 19, halign: 'right', textColor: [100, 116, 139] },
+        5: { cellWidth: 19, halign: 'right' },
+        6: { cellWidth: 17, halign: 'right' },
+        7: { cellWidth: 14, halign: 'center' },
+        8: { cellWidth: 21, halign: 'right', fontStyle: 'bold' },
       },
       margin: { left: 14, right: 14, bottom: 20 },
-      didDrawCell: (data) => {
-        if (data.section !== 'body' || data.column.index !== 1) return;
-        const img = images[data.row.index];
-        if (!img) return;
-        const s = Math.min(data.cell.width, data.cell.height) - 3;
-        doc.addImage(img, 'JPEG', data.cell.x + (data.cell.width - s) / 2, data.cell.y + (data.cell.height - s) / 2, s, s);
-      },
     });
 
     // Totals
     y = doc.lastAutoTable.finalY + 8;
-    if (y > H - 45) { doc.addPage(); y = 20; }
+    if (y > H - 65) { doc.addPage(); y = 20; }
     const units = lines.reduce((s, l) => s + l.qty, 0);
     doc.setFontSize(9.5);
     doc.setTextColor(100, 116, 139);
     doc.text(`Products: ${lines.length}`, 14, y);
     doc.text(`Units: ${units}`, 14, y + 5);
+
+    const sums = [
+      ...(discount > 0 ? [['Discount included', '-' + money(discount)]] : []),
+      ['Subtotal (ex VAT)', money(subtotal)],
+      [`VAT (${info.vat}%)`, money(vat)],
+    ];
+    doc.setTextColor(15, 23, 42);
+    sums.forEach(([label, value]) => {
+      doc.text(label, W - 79, y);
+      doc.text(value, W - 19, y, { align: 'right' });
+      y += 6;
+    });
+    y += 3;
 
     doc.setFillColor(...brand);
     doc.roundedRect(W - 84, y - 5, 70, 14, 2, 2, 'F');

@@ -4,3 +4,10 @@ Require all denied
 <FilesMatch "\.jpg$">
   Require all granted
 </FilesMatch>
+
+# Let browsers keep product photos (the catalog adds ?v=… when a photo changes)
+<IfModule mod_headers.c>
+  <FilesMatch "\.jpg$">
+    Header set Cache-Control "public, max-age=31536000, immutable"
+  </FilesMatch>
+</IfModule>

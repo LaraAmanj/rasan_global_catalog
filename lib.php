@@ -94,6 +94,16 @@ function is_admin(): bool
     return !empty($_SESSION['admin']);
 }
 
+/** Adds ?v=<file time> to uploaded photos so browsers can cache them for a long time but still see a replaced photo. */
+function image_url(string $image): string
+{
+    if (!preg_match(UPLOAD_PATTERN, $image)) {
+        return $image;
+    }
+    $time = @filemtime(__DIR__ . '/' . $image);
+    return $time ? "$image?v=$time" : $image;
+}
+
 /** What the catalog is allowed to see. The real price only leaves the server after the PIN is entered. */
 function public_product(array $p): array
 {
@@ -103,7 +113,7 @@ function public_product(array $p): array
         'category'   => $p['category'],
         'sku'        => $p['sku'],
         'note'       => $p['note'] ?? '',
-        'image'      => $p['image'] ?? '',
+        'image'      => image_url((string) ($p['image'] ?? '')),
         'in_stock'   => (bool) ($p['in_stock'] ?? true),
         'price_code' => price_code((float) $p['price']),
     ];
