@@ -24,7 +24,7 @@ $adminData = [
 <link rel="stylesheet" href="assets/style.css">
 <link rel="stylesheet" href="assets/admin.css">
 </head>
-<body>
+<body class="admin-page">
 
 <header class="topbar">
   <a class="brand" href="./">

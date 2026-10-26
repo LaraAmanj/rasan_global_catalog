@@ -34,7 +34,10 @@ function load_products(): array
         return [];
     }
     $data = json_decode((string) file_get_contents(DATA_FILE), true);
-    return is_array($data) ? $data : [];
+    $data = is_array($data) ? $data : [];
+    // Sorted by SKU, natural order so TOY-2 comes before TOY-10
+    usort($data, fn ($a, $b) => strnatcasecmp((string) ($a['sku'] ?? ''), (string) ($b['sku'] ?? '')));
+    return $data;
 }
 
 function save_products(array $products): void

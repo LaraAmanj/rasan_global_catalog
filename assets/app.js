@@ -4,13 +4,17 @@
   const APP = window.APP;
   const $ = (s, el = document) => el.querySelector(s);
   const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-  const money = (n) => APP.currency + Number(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const money = (n) => APP.currency + Number(n).toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   const CART_KEY = 'rg_order_v1';
+  const LOCK_ICON = '<svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>';
+  const OPEN_ICON = '<svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 7.5-2"/></svg>';
   const SALESMAN_KEY = 'rg_salesman';
 
   const state = {
     products: [],
-    unlocked: false,
+    unlocked: false, // PIN entered on this device (server session)
+    showAll: false, // top lock: every real price visible
+    revealed: new Set(), // card locks: single prices visible
     category: null, // null = category screen, 'all' = every category
     search: '',
     stock: 'all',
@@ -41,15 +45,18 @@
   function applyCatalog(data) {
     state.products = data.products;
     state.unlocked = data.unlocked;
+    if (!state.unlocked) {
+      state.showAll = false;
+      state.revealed.clear();
+    }
     clearTimeout(state.lockTimer);
     if (data.unlocked) {
       state.lockTimer = setTimeout(() => api('products').then((d) => { applyCatalog(d); render(); toast('Prices locked again'); }), data.expires_in * 1000 + 500);
     }
-    document.body.classList.toggle('unlocked', state.unlocked);
-    $('#lockBtn').title = state.unlocked ? 'Prices visible – tap to hide' : 'Show real prices (salesman)';
   }
 
   const byId = (id) => state.products.find((p) => p.id === id);
+  const isShown = (p) => state.unlocked && p.price !== undefined && (state.showAll || state.revealed.has(p.id));
   const catOf = (key) => APP.categories[key] || { label: key, icon: '📦' };
 
   // ── rendering ─────────────────────────────────────────────
@@ -58,6 +65,9 @@
     $('#viewCategories').hidden = !onCategories;
     $('#viewProducts').hidden = onCategories;
     $('#backBtn').hidden = onCategories;
+    document.body.classList.toggle('unlocked', state.unlocked);
+    document.body.classList.toggle('show-all', state.unlocked && state.showAll);
+    $('#lockBtn').title = state.showAll ? 'All prices visible – tap to lock' : 'Show all real prices (salesman)';
     if (onCategories) renderCategories(); else renderProducts();
     renderCart();
   }
@@ -119,9 +129,9 @@
   }
 
   function priceHtml(p) {
-    return state.unlocked && p.price !== undefined
-      ? `<span class="price real">${money(p.price)}</span>`
-      : `<button class="price code" data-reveal title="Price code – salesman only">${esc(p.price_code)}</button>`;
+    return isShown(p)
+      ? `<button class="price real" data-price title="Tap to hide this price">${OPEN_ICON}<span>${money(p.price)}</span></button>`
+      : `<button class="price code" data-price title="Tap to show this price (salesman)">${LOCK_ICON}<span>Price</span></button>`;
   }
 
   function stepperHtml(id, qty) {
@@ -141,13 +151,14 @@
 
     return `
       <article class="card ${p.in_stock ? '' : 'is-out'} ${line ? 'in-cart' : ''}" data-id="${p.id}">
-        <div class="card-img">
+        <div class="card-img" ${p.image ? 'data-zoom title="Tap to see full image"' : ''}>
           ${imageHtml(p)}
           <span class="badge ${p.in_stock ? 'in' : 'out'}">${p.in_stock ? 'Stock In' : 'Stock Out'}</span>
+          ${p.image ? '<span class="zoom-hint"><svg viewBox="0 0 24 24"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg></span>' : ''}
         </div>
         <div class="card-body">
-          <span class="sku">SKU · ${esc(p.sku)}</span>
           <h3>${esc(p.name)}</h3>
+          <span class="sku">SKU · ${esc(p.sku)}</span>
           ${p.note ? `<p class="note">📝 ${esc(p.note)}</p>` : ''}
           <div class="card-foot">
             ${priceHtml(p)}
@@ -175,7 +186,7 @@
 
     $('#cartList').innerHTML = lines.length ? lines.map((l) => {
       const p = l.product;
-      const price = state.unlocked && p.price !== undefined
+      const price = isShown(p)
         ? `<strong>${money(p.price * l.qty)}</strong><small>${money(p.price)} each</small>`
         : `<span class="price code small">${esc(p.price_code)}</span>`;
       return `
@@ -192,9 +203,9 @@
         </div>`;
     }).join('') : `<div class="empty small"><span>🛒</span><p>Tap “+ Add” on a product to start an order.</p></div>`;
 
-    $('#totalRow').innerHTML = !lines.length ? '' : state.unlocked
+    $('#totalRow').innerHTML = !lines.length ? '' : lines.every((l) => isShown(l.product))
       ? `<span>Total</span><strong>${money(lines.reduce((s, l) => s + (l.product.price || 0) * l.qty, 0))}</strong>`
-      : `<span>Total</span><button class="link" data-reveal>🔒 Unlock to see total</button>`;
+      : `<span>Total</span><button class="link" data-reveal>🔒 Show prices to see total</button>`;
   }
 
   // ── cart actions ──────────────────────────────────────────
@@ -224,6 +235,7 @@
   }
 
   // ── salesman lock ─────────────────────────────────────────
+  /** `then` runs after a correct PIN, before the screen redraws. */
   function openPin(then = null) {
     state.afterUnlock = then;
     $('#pinError').textContent = '';
@@ -237,23 +249,45 @@
     try {
       applyCatalog(await api('unlock', { pin: $('#pinInput').value }));
       $('#pinDialog').close();
-      render();
-      toast('Prices unlocked');
       const next = state.afterUnlock;
       state.afterUnlock = null;
       if (next) next();
+      render();
+      toast('Unlocked');
     } catch (err) {
       $('#pinError').textContent = err.message;
       $('#pinInput').select();
     }
   });
 
+  function showAllPrices() {
+    if (!state.unlocked) return openPin(() => { state.showAll = true; });
+    state.showAll = true;
+    render();
+  }
+
+  // Top lock: locked → show all (PIN), some shown → show all, all shown → lock everything
   $('#lockBtn').addEventListener('click', async () => {
-    if (!state.unlocked) return openPin();
+    if (!state.unlocked || !state.showAll) return showAllPrices();
     applyCatalog(await api('lock', {}));
     render();
     toast('Prices hidden');
   });
+
+  // Card lock: show or hide just this product's price
+  function togglePrice(id) {
+    if (!state.unlocked) return openPin(() => { state.revealed.add(id); });
+    if (state.showAll) {
+      state.showAll = false;
+      state.revealed = new Set(state.products.map((p) => p.id));
+      state.revealed.delete(id);
+      return render();
+    }
+    if (state.revealed.has(id)) state.revealed.delete(id);
+    else state.revealed.add(id);
+    refreshCard(id);
+    renderCart();
+  }
 
   // ── drawer ────────────────────────────────────────────────
   function openCart() {
@@ -325,9 +359,11 @@
   });
 
   $('#grid').addEventListener('click', (e) => {
-    if (e.target.closest('[data-reveal]')) return openPin();
     if (handleStepper(e)) return;
     const card = e.target.closest('.card');
+    if (!card) return;
+    if (e.target.closest('[data-price]')) return togglePrice(card.dataset.id);
+    if (e.target.closest('[data-zoom]')) return openViewer(byId(card.dataset.id));
     if (card && e.target.closest('[data-add]')) {
       setQty(card.dataset.id, 1);
       toast('Added to order');
@@ -339,7 +375,7 @@
   });
 
   $('#drawer').addEventListener('click', (e) => {
-    if (e.target.closest('[data-reveal]')) return openPin();
+    if (e.target.closest('[data-reveal]')) return showAllPrices();
     if (handleStepper(e)) return;
     const line = e.target.closest('.line');
     if (line && e.target.closest('[data-remove]')) setQty(line.dataset.id, 0);
@@ -365,6 +401,20 @@
     ph.textContent = img.dataset.fallback;
     img.replaceWith(ph);
   }, true);
+
+  // ── full image viewer ─────────────────────────────────────
+  function openViewer(p) {
+    const img = document.querySelector(`.card[data-id="${p?.id}"] .card-img img`);
+    if (!img) return; // no photo, or it failed to load
+    $('#viewerImg').src = p.image;
+    $('#viewerImg').alt = p.name;
+    $('#viewerCaption').textContent = p.name;
+    $('#viewer').showModal();
+  }
+  // Tap anywhere outside the photo to close
+  $('#viewer').addEventListener('click', (e) => {
+    if (e.target !== $('#viewerImg')) $('#viewer').close();
+  });
 
   document.querySelectorAll('dialog [data-close]').forEach((b) => b.addEventListener('click', () => b.closest('dialog').close()));
 
@@ -401,7 +451,12 @@
     try {
       await buildPdf(info, cartLines());
       $('#exportDialog').close();
-      toast('PDF saved');
+      // Order is done: start fresh for the next customer
+      state.cart = {};
+      saveCart();
+      f.reset();
+      closeCart();
+      toast('PDF saved · order cleared');
     } catch (err) {
       console.error(err);
       alert('Could not create the PDF: ' + err.message);
@@ -596,6 +651,6 @@
 
   // ── start ────────────────────────────────────────────────
   api('products')
-    .then((d) => { applyCatalog(d); render(); })
+    .then((d) => { applyCatalog(d); state.showAll = d.unlocked; render(); })
     .catch((err) => { $('#catGrid').innerHTML = `<p class="error">Could not load products: ${esc(err.message)}</p>`; });
 })();

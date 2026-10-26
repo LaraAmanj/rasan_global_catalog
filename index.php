@@ -138,6 +138,15 @@ $appData = [
   </form>
 </dialog>
 
+<!-- Full image viewer -->
+<dialog id="viewer" class="viewer">
+  <button type="button" class="icon-btn viewer-close" data-close aria-label="Close">
+    <svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>
+  </button>
+  <img id="viewerImg" alt="">
+  <p class="viewer-caption" id="viewerCaption"></p>
+</dialog>
+
 <div class="toast" id="toast" role="status"></div>
 
 <script>window.APP = <?= json_encode($appData, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG) ?>;</script>

@@ -48,7 +48,7 @@ svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width:
   color: var(--brand); font-weight: 800; letter-spacing: -.5px;
 }
 .brand-text { display: flex; flex-direction: column; line-height: 1.15; min-width: 0; }
-.brand-text strong { font-size: 16px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.brand-text strong { font-size: clamp(14px, 1.2vw + 10px, 17px); overflow-wrap: anywhere; }
 .brand-text small { font-size: 12px; opacity: .7; }
 
 .search {
@@ -76,9 +76,10 @@ svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width:
 .icon-btn.sm { width: 30px; height: 30px; border-radius: 9px; background: #f1f5f9; color: var(--muted); }
 .icon-btn.sm svg { width: 16px; height: 16px; }
 .lock .i-open { display: none; }
-body.unlocked .lock { background: var(--accent); color: var(--brand); }
-body.unlocked .lock .i-open { display: block; }
-body.unlocked .lock .i-locked { display: none; }
+body.unlocked .lock { box-shadow: inset 0 0 0 2px var(--accent); }
+body.show-all .lock { background: var(--accent); color: var(--brand); box-shadow: none; }
+body.show-all .lock .i-open { display: block; }
+body.show-all .lock .i-locked { display: none; }
 .cart-btn .count {
   position: absolute; top: -5px; right: -5px;
   min-width: 20px; height: 20px; padding: 0 5px; border-radius: 10px;
@@ -208,42 +209,70 @@ body.unlocked .lock .i-locked { display: none; }
 .grid { display: grid; gap: 12px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .card {
   display: flex; flex-direction: column; overflow: hidden;
-  border-radius: var(--radius); background: var(--surface); box-shadow: var(--shadow);
-  outline: 2px solid transparent; transition: outline-color .2s, transform .2s;
+  border-radius: 20px; background: var(--surface); box-shadow: var(--shadow);
+  outline: 2px solid transparent; outline-offset: -2px; transition: outline-color .2s, transform .2s, box-shadow .2s;
   animation: rise .35s both;
 }
 .card.in-cart { outline-color: var(--accent); }
-.card-img { position: relative; aspect-ratio: 1; background: #f8fafc; display: grid; place-items: center; }
-.card-img img { width: 100%; height: 100%; object-fit: contain; padding: 10px; }
+
+/* The photo is the hero of the card */
+.card-img {
+  position: relative; aspect-ratio: 1; overflow: hidden;
+  display: grid; place-items: center;
+  background: #fff; border-bottom: 1px solid var(--line);
+}
+.card-img[data-zoom] { cursor: zoom-in; }
+.card-img img { width: 100%; height: 100%; object-fit: contain; padding: 6px; transition: transform .5s cubic-bezier(.2, .7, .2, 1); }
 .ph { display: grid; place-items: center; width: 100%; height: 100%; font-size: 52px; background: linear-gradient(135deg, #f1f5f9, #e2e8f0); }
 .card.is-out .card-img img, .card.is-out .ph { filter: grayscale(1); opacity: .55; }
 .badge {
   position: absolute; top: 10px; left: 10px;
   padding: 4px 9px; border-radius: 999px;
   font-size: 11px; font-weight: 700; letter-spacing: .2px;
-  backdrop-filter: blur(6px);
+  box-shadow: 0 2px 8px -2px rgba(15, 23, 42, .2);
 }
-.badge.in { background: rgba(22, 163, 74, .12); color: var(--green); }
-.badge.out { background: rgba(220, 38, 38, .12); color: var(--red); }
-.card-body { display: flex; flex-direction: column; gap: 4px; padding: 12px; flex: 1; }
-.sku { font-size: 11px; font-weight: 600; color: var(--muted); letter-spacing: .3px; text-transform: uppercase; }
-.card h3 { margin: 0; font-size: 15px; line-height: 1.3; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.badge.in { background: #dcfce7; color: var(--green); }
+.badge.out { background: #fee2e2; color: var(--red); }
+.zoom-hint {
+  position: absolute; top: 10px; right: 10px;
+  width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center;
+  background: rgba(15, 23, 42, .55); color: #fff;
+  -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
+  transition: transform .2s, background .2s;
+}
+.zoom-hint svg { width: 15px; height: 15px; }
+
+.card-body { display: flex; flex-direction: column; gap: 3px; padding: 11px 12px 12px; flex: 1; }
+.sku { font-size: 11px; font-weight: 600; color: var(--muted); letter-spacing: .3px; text-transform: uppercase; overflow-wrap: anywhere; }
+.card h3 {
+  margin: 0; font-size: clamp(13.5px, .5vw + 11.5px, 16px); line-height: 1.3; font-weight: 700;
+  overflow-wrap: anywhere; hyphens: auto;
+}
 .note {
-  margin: 2px 0 0; padding: 6px 8px; border-radius: 8px;
+  margin: 4px 0 0; padding: 6px 8px; border-radius: 8px;
   background: #fffbeb; color: #92400e; font-size: 12px; line-height: 1.35;
   display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
 }
-.card-foot { margin-top: auto; padding-top: 10px; display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+.card-foot { margin-top: auto; padding-top: 10px; display: grid; gap: 8px; }
+.card-foot .btn.add, .card-foot .stepper { width: 100%; }
+.card-foot .stepper { justify-content: space-between; }
+.card-foot .stepper input { flex: 1; }
 
 /* Price: secret code for everyone, real price for unlocked salesman */
-.price { font-weight: 800; white-space: nowrap; }
+.price { display: inline-flex; align-items: center; gap: 6px; font-weight: 800; white-space: nowrap; }
+.price svg { width: 14px; height: 14px; flex: none; stroke-width: 2.4; }
+button.price { justify-self: start; height: 32px; padding: 0 10px; border-radius: 10px; transition: background .2s, border-color .2s; }
 .price.real { font-size: 17px; color: var(--brand); }
+button.price.real { border: 1px solid #fde68a; background: #fef3c7; font-size: 16px; }
+button.price.real svg { color: #b45309; }
 .price.code {
   border: 1px dashed #cbd5e1; background: #f8fafc;
   padding: 5px 9px; border-radius: 8px;
   font-family: ui-monospace, "SF Mono", Menlo, monospace;
   font-size: 13px; letter-spacing: 1.5px; color: #475569;
 }
+button.price.code { padding: 0 10px; border-radius: 10px; }
+button.price.code:hover { border-color: var(--brand); }
 .price.code.small { font-size: 12px; padding: 3px 7px; }
 
 .btn {
@@ -308,6 +337,21 @@ body.unlocked .lock .i-locked { display: none; }
 }
 .line-note:focus { outline: 2px solid var(--accent); border-color: transparent; background: #fff; }
 
+/* ── Full image viewer ───────────────────────────────── */
+.viewer {
+  inset: 0; width: 100%; height: 100%; max-width: 100%; max-height: 100%;
+  margin: 0; padding: max(16px, env(safe-area-inset-top)) 16px calc(16px + var(--safe-b));
+  border: 0; background: rgba(2, 6, 23, .94); color: #fff;
+}
+.viewer[open] { display: grid; grid-template-rows: 1fr auto; place-items: center; gap: 12px; animation: fade .2s; }
+.viewer::backdrop { background: transparent; }
+.viewer img {
+  max-width: 100%; max-height: 100%; min-height: 0; object-fit: contain;
+  border-radius: 14px; background: #fff; animation: pop .25s cubic-bezier(.2, .9, .3, 1.2);
+}
+.viewer-caption { margin: 0; font-weight: 700; font-size: 15px; text-align: center; overflow-wrap: anywhere; }
+.viewer-close { position: absolute; top: max(14px, env(safe-area-inset-top)); right: 14px; z-index: 1; background: rgba(255, 255, 255, .16); }
+
 /* ── Modals ──────────────────────────────────────────── */
 .modal {
   width: min(380px, calc(100% - 32px)); padding: 0;
@@ -365,10 +409,9 @@ body.unlocked .lock .i-locked { display: none; }
   .topbar { flex-wrap: wrap; padding-top: max(10px, env(safe-area-inset-top)); }
   .search { order: 10; flex: 1 1 100%; }
   .brand-text strong { font-size: 15px; }
-  .card-foot { flex-direction: column; align-items: stretch; }
-  .card-foot .btn.add, .card-foot .stepper { width: 100%; }
-  .card-foot .stepper { justify-content: space-between; }
-  .card-foot .price { text-align: center; }
+  .card-body { padding: 10px 10px 11px; }
+  .badge { top: 8px; left: 8px; }
+  .zoom-hint { top: 8px; right: 8px; width: 28px; height: 28px; }
   .field-row { grid-template-columns: 1fr; }
   .section-head h2 { font-size: 21px; }
 }
@@ -397,7 +440,9 @@ body.unlocked .lock .i-locked { display: none; }
 }
 
 @media (hover: hover) {
-  .card:hover { transform: translateY(-2px); }
+  .card:hover { transform: translateY(-2px); box-shadow: var(--shadow-lg); }
+  .card:hover .card-img[data-zoom] img { transform: scale(1.06); }
+  .card:hover .zoom-hint { transform: scale(1.1); background: var(--brand); }
 }
 @media (prefers-reduced-motion: reduce) {
   *, *::before { animation: none !important; transition: none !important; }

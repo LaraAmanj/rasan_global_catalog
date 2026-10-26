@@ -13,7 +13,7 @@ return [
         'email'   => 'rasangloballtd@yahoo.com',
     ],
 
-    'currency' => '$',
+    'currency' => '£',
 
     // ── Hidden price system ──────────────────────────────────
     // Customers never see the real price. Each product shows a

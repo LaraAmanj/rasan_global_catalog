@@ -125,9 +125,13 @@ switch ($action) {
 
         $products = load_products();
         $oldImage = '';
+        $existing = null;
         foreach ($products as $p) {
             if ($p['sku'] === $sku && $p['id'] !== $id) {
                 json_out(['error' => "SKU $sku is already used by \"{$p['name']}\""], 422);
+            }
+            if ($p['id'] === $id) {
+                $existing = $p;
             }
         }
 
@@ -140,6 +144,8 @@ switch ($action) {
             'note'       => mb_substr($note, 0, 500),
             'image'      => $image,
             'in_stock'   => (bool) ($input['in_stock'] ?? true),
+            // Editing keeps the original date, so only new products jump to the top
+            'created_at' => $existing === null ? date('c') : ($existing['created_at'] ?? ''),
             'updated_at' => date('c'),
         ];
 
